@@ -48,15 +48,15 @@ x_test = scaler.transform(x_test)
 input_shape = x_train.shape[1]
 
 # this is the size of our encoded representations
-encoding_dim = 64  
+#encoding_dim = 64  
 
 input_signal = Input(shape=(input_shape,))
-encoded = Dense(256, activation='relu', activity_regularizer=regularizers.l1(10e-5))(input_signal)
-encoded = Dense(128, activation='relu')(encoded)
-encoded = Dense(64, activation='relu')(encoded)
+encoded = Dense(500, activation='relu', activity_regularizer=regularizers.l1(10e-5))(input_signal)
+encoded = Dense(100, activation='relu')(encoded)
+encoded = Dense(20, activation='relu')(encoded)
 
-decoded = Dense(128, activation='relu')(encoded)
-decoded = Dense(256, activation='relu')(decoded)
+decoded = Dense(100, activation='relu')(encoded)
+decoded = Dense(500, activation='relu')(decoded)
 decoded = Dense(input_shape, activation='sigmoid')(decoded)
 
 autoencoder = Model(input=input_signal, output=decoded)
@@ -65,9 +65,9 @@ autoencoder = Model(input=input_signal, output=decoded)
 encoder = Model(input=input_signal, output=encoded)
 
 # create a placeholder for an encoded (X-dimensional) input
-encoded_input_1 = Input(shape=(64,))
-encoded_input_2 = Input(shape=(128,))
-encoded_input_3 = Input(shape=(256,))
+encoded_input_1 = Input(shape=(20,))
+encoded_input_2 = Input(shape=(100,))
+encoded_input_3 = Input(shape=(500,))
 
 # retrieve the last layer of the autoencoder model
 decoder_layer_1 = autoencoder.layers[-3]
@@ -79,9 +79,9 @@ decoder_1 = Model(input = encoded_input_1, output = decoder_layer_1(encoded_inpu
 decoder_2 = Model(input = encoded_input_2, output = decoder_layer_2(encoded_input_2))
 decoder_3 = Model(input = encoded_input_3, output = decoder_layer_3(encoded_input_3))
 # training
-autoencoder.compile(optimizer='adam', loss='binary_crossentropy')
+autoencoder.compile(optimizer='Adadelta', loss='binary_crossentropy')
 autoencoder.fit(x_train, x_train,
-                epochs=int(2e5),
+                epochs=int(50),
                 batch_size=1024,
                 shuffle=True,
                 validation_data=(x_validation, x_validation))
@@ -89,9 +89,9 @@ autoencoder.fit(x_train, x_train,
 a=autoencoder.predict(x_test)
 a = scaler.inverse_transform(a)
 x_test = scaler.inverse_transform(x_test)
-ns = np.random.choice(np.arange(x_test.shape[0]),size=20,replace=False)
+ns = np.random.choice(np.arange(x_test.shape[0]),size=3,replace=False)
 for n in ns:
     fig, ax = plt.subplots(nrows=2,figsize=(8,8))
     _=ax[0].plot(x_test[n].reshape(plot_x,plot_y).T)
     _=ax[1].plot(a[n].reshape(plot_x,plot_y).T)
-    fig.savefig('D:/NING - spindle/variational_autoencoder_spindles/test results/simple_encoder%d.png'%n)
+    #fig.savefig('D:/NING - spindle/variational_autoencoder_spindles/test results/simple_encoder%d.png'%n)
