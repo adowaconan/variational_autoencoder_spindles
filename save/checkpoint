@@ -1,0 +1,2 @@
+model_checkpoint_path: "D:/NING - spindle/variational_autoencoder_spindles/save/model.ckpt"
+all_model_checkpoint_paths: "D:/NING - spindle/variational_autoencoder_spindles/save/model.ckpt"
