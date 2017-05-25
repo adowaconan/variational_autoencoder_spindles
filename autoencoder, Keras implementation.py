@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 os.chdir('D:\\NING - spindle\\training set\\')
 
 raw_files = [f for f in os.listdir(os.getcwd()) if ('.fif' in f)]
-raw_files = np.random.choice(raw_files,size=1,replace=False)
+raw_files = np.random.choice(raw_files,size=3,replace=False)
 epochs = []
 for ii,raw_name in enumerate(raw_files):
     raw = mne.io.read_raw_fif(raw_name,)
@@ -79,9 +79,9 @@ decoder_1 = Model(input = encoded_input_1, output = decoder_layer_1(encoded_inpu
 decoder_2 = Model(input = encoded_input_2, output = decoder_layer_2(encoded_input_2))
 decoder_3 = Model(input = encoded_input_3, output = decoder_layer_3(encoded_input_3))
 # training
-autoencoder.compile(optimizer='Adadelta', loss='binary_crossentropy')
+autoencoder.compile(optimizer='SGD', loss='mean_squared_error')
 autoencoder.fit(x_train, x_train,
-                epochs=int(50),
+                epochs=int(100),
                 batch_size=1024,
                 shuffle=True,
                 validation_data=(x_validation, x_validation))
