@@ -249,8 +249,8 @@ def train(network_architecture, learning_rate=0.001,
 
 network_architecture = \
     dict(n_hidden_recog_1=500, # 1st layer encoder neurons
-         n_hidden_recog_2=500, # 2nd layer encoder neurons
-         n_hidden_gener_1=500, # 1st layer decoder neurons
+         n_hidden_recog_2=100, # 2nd layer encoder neurons
+         n_hidden_gener_1=100, # 1st layer decoder neurons
          n_hidden_gener_2=500, # 2nd layer decoder neurons
          n_input=x_train.shape[1],
          n_z=20)  # dimensionality of latent space
