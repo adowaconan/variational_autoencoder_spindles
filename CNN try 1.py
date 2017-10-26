@@ -40,15 +40,15 @@ data = data * 1e6 # rescale to micro voltage
 # leave out test data
 X_train,X_test = train_test_split(data)
 # set up some hyper parameters
-batch_size = 100
-n_filters = 50
-length_filters = 100
-pool_size=10
+batch_size = 250
+n_filters = 40
+length_filters = 50
+pool_size = 15
 length_strides = 1
 n_output = 25
 file_path = 'weights.1D.best.hdf5'
 checkPoint = ModelCheckpoint(file_path,monitor='val_loss',save_best_only=True,mode='min',period=5)
-
+callback_list = [checkPoint]
 
 layer_ = {}
 model = Sequential()
@@ -63,7 +63,7 @@ model.add(MaxPooling1D(pool_size))
 #model.add(Dense(layer_[0],activation='linear'))
 #model.add(Reshape(layer_[1]))
 
-model.add(Conv1D(int(n_filters/2),int(length_filters/2),strides=length_strides,padding='same',activation='relu',))
+model.add(Conv1D(int(n_filters/4),int(length_filters/4),strides=length_strides,padding='same',activation='relu',))
 model.add(UpSampling1D(pool_size))
 model.add(Conv1D(n_filters,length_filters,strides=length_strides,padding='same',activation='relu',))
 model.add(UpSampling1D(pool_size))
@@ -74,7 +74,7 @@ model.compile(optimizer='sgd',loss=losses.mean_squared_error,metrics=['mae'])
 model.summary()
 
 
-model.fit(X_train,X_train,batch_size=250,epochs=500,validation_split=0.2,callbacks=checkPoint)
+model.fit(X_train,X_train,batch_size=batch_size,epochs=500,validation_split=0.2,callbacks=callback_list)
 
 X_pred = model.predict(X_test)
 idx = np.random.choice(np.arange(len(X_test)),size=1,)
