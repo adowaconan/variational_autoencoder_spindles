@@ -53,6 +53,9 @@ pool_size=(1,16)
 length_strides = {1:(1,1),2:(1,1),3:(1,16),4:(1,1),5:(1,16)}
 n_output = 25
 input_shape = (61,2000)
+file_path = 'weights.22D.best.hdf5'
+checkPoint = ModelCheckpoint(file_path,monitor='val_loss',save_best_only=True,mode='min',period=5)
+callback_list = [checkPoint]
 
 model = Sequential()
 model.add(Reshape((61,2000,1),input_shape=input_shape))
