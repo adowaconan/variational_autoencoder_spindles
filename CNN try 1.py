@@ -8,7 +8,7 @@ Created on Wed Oct 25 11:25:47 2017
 import numpy as np
 from matplotlib import pyplot as plt
 import tensorflow as tf
-import keras
+from scipy import stats
 from keras.callbacks import ModelCheckpoint
 from keras.models import Sequential,Model
 from keras.layers import Dense
@@ -36,9 +36,18 @@ def generate_(n=3):
     return data
 data = generate_(6)
 data = data.astype('float32')
-data = data * 1e6 # rescale to micro voltage
+data = data * 1e5 # rescale 
+
+# some preprocessing the outlier values (extreme values)
+Trimmed_data = stats.trimboth(data.flatten(),0.05)
+idx_max = data > Trimmed_data.max()
+idx_min = data < Trimmed_data.min()
+data[idx_max] = Trimmed_data.max()
+data[idx_min] = Trimmed_data.min()
+
+
 # leave out test data
-X_train,X_test = train_test_split(data)
+X_train,X_test = train_test_split(data,test_size=0.05)
 # set up some hyper parameters
 batch_size = 250
 n_filters = 40
@@ -46,8 +55,8 @@ length_filters = 50
 pool_size = 10
 length_strides = 1
 n_output = 25
-file_path = 'weights.1D.best.hdf5'
-checkPoint = ModelCheckpoint(file_path,monitor='val_loss',save_best_only=True,mode='min',period=5)
+file_path = working_dir+'weights.1D.best.hdf5'
+checkPoint = ModelCheckpoint(file_path,monitor='val_loss',save_best_only=True,mode='min',period=1,verbose=1)
 callback_list = [checkPoint]
 
 layer_ = {}
@@ -70,11 +79,11 @@ model.add(UpSampling1D(pool_size))
 model.add(Conv1D(61,length_filters,strides=length_strides,padding='same',activation='relu'))
 
 
-model.compile(optimizer='sgd',loss=losses.mean_squared_error,metrics=['mae'])
+model.compile(optimizer='sgd',loss=losses.binary_crossentropy,metrics=['mae'])
 model.summary()
 
 
-model.fit(X_train,X_train,batch_size=batch_size,epochs=500,validation_split=0.2,callbacks=callback_list)
+model.fit(X_train,X_train,batch_size=batch_size,epochs=500,validation_split=0.2,callbacks=callback_list,verbose=0)
 
 X_pred = model.predict(X_test)
 idx = np.random.choice(np.arange(len(X_test)),size=1,)
