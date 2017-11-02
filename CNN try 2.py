@@ -66,18 +66,7 @@ checkPoint = ModelCheckpoint(file_path,monitor='val_loss',save_best_only=True,mo
 callback_list = [checkPoint]
 
 model = Sequential()
-model.add(Reshape((61,2000,1),input_shape=input_shape))
-model.add(Conv2D(n_filters[1],length_filters[1],strides=length_strides[1],padding='same',activation='relu',data_format='channels_first'))
-#model.add(Permute((3,2,1)))
-model.add(MaxPooling2D(pool_size[1],strides=length_strides[2],padding='same'))
-model.add(Conv2D(n_filters[2],length_filters[2],strides=length_strides[3],padding='same',activation='relu',data_format='channels_first'))
-model.add(MaxPooling2D(pool_size[2],strides=length_strides[4],padding='same',data_format='channels_first'))
 
-model.add(Conv2D(n_filters[3],length_filters[3],strides=length_strides[5],padding='same',activation='relu',data_format='channels_first'))
-model.add(UpSampling2D(pool_size[3]))
-model.add(Conv2D(n_filters[4],length_filters[4],strides=length_strides[6],padding='same',activation='relu',data_format='channels_first'))
-model.add(UpSampling2D(pool_size[4]))
-#model.add(Conv2D(n_filters[5],length_filters[5],strides=length_strides[7],padding='same',activation='relu',data_format='channels_first'))
 model.summary()
 
 model.compile(optimizer='sgd',loss=losses.binary_crossentropy,metrics=['mae'])

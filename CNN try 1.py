@@ -15,9 +15,10 @@ from keras.layers import Dense
 from keras.layers import Dropout
 from keras.layers import Flatten,Reshape
 from keras.layers import Input
+from keras.layers.normalization import BatchNormalization
 from keras.constraints import maxnorm
 from keras.optimizers import SGD
-from keras import losses
+from keras import losses,metrics
 from keras.layers.convolutional import Conv2D,Conv1D
 from keras.layers.convolutional import MaxPooling2D,MaxPooling1D
 from keras.layers import UpSampling2D,UpSampling1D
@@ -36,18 +37,19 @@ def generate_(n=3):
     return data
 data = generate_(6)
 data = data.astype('float32')
-data = data * 1e5 # rescale 
+data = data * 1e6 # rescale 
+
 
 # some preprocessing the outlier values (extreme values)
-Trimmed_data = stats.trimboth(data.flatten(),0.05)
-idx_max = data > Trimmed_data.max()
-idx_min = data < Trimmed_data.min()
-data[idx_max] = Trimmed_data.max()
-data[idx_min] = Trimmed_data.min()
+#Trimmed_data = stats.trimboth(data.flatten(),0.05)
+#idx_max = data > Trimmed_data.max()
+#idx_min = data < Trimmed_data.min()
+#data[idx_max] = Trimmed_data.max()
+#data[idx_min] = Trimmed_data.min()
 
-
+normal_data = (data - data.mean()) / data.std()
 # leave out test data
-X_train,X_test = train_test_split(data,test_size=0.05)
+X_train,X_test = train_test_split(normal_data,test_size=0.01)
 # set up some hyper parameters
 batch_size = 250
 n_filters = 40
@@ -61,32 +63,44 @@ callback_list = [checkPoint]
 
 layer_ = {}
 model = Sequential()
-model.add(Conv1D(n_filters,length_filters,strides=length_strides,padding='same',activation='relu',input_shape=(2000,61)))
+model.add(Conv1D(n_filters,length_filters,strides=length_strides,padding='same',activation='sigmoid',input_shape=(2000,61)))
 model.add(MaxPooling1D(pool_size))
-model.add(Conv1D(int(n_filters/2),int(length_filters/2),strides=length_strides,padding='same',activation='relu',))
-model.add(MaxPooling1D(pool_size))
-#layer_[1] = model.output_shape[1:]
-#model.add(Flatten())
-#layer_[0] = model.output_shape[1]
-#model.add(Dense(n_output,activation='linear'))
-#model.add(Dense(layer_[0],activation='linear'))
-#model.add(Reshape(layer_[1]))
+#model.add(BatchNormalization())
+model.add(Dropout(0.3))
+model.add(Conv1D(int(n_filters/2),int(length_filters/2),strides=length_strides,padding='same',activation='sigmoid',))
+model.add(MaxPooling1D(int(pool_size/5)))
+#model.add(BatchNormalization())
+model.add(Dropout(0.5))
+model.add(Conv1D(int(n_filters/4),int(length_filters/4),strides=length_strides,padding='same',activation='sigmoid',))
+model.add(MaxPooling1D(int(pool_size/2)))
+#model.add(BatchNormalization())
+model.add(Dropout(0.6))
 
-model.add(Conv1D(int(n_filters/4),int(length_filters/4),strides=length_strides,padding='same',activation='relu',))
+model.add(Conv1D(int(n_filters/4),int(length_filters/4),strides=length_strides,padding='same',activation='sigmoid',))
+model.add(UpSampling1D(int(pool_size/5)))
+#model.add(BatchNormalization())
+model.add(Dropout(0.6))
+model.add(Conv1D(int(n_filters/2),int(length_filters/2),strides=length_strides,padding='same',activation='sigmoid',))
+model.add(UpSampling1D(int(pool_size/2)))
+#model.add(BatchNormalization())
+model.add(Dropout(0.5))
+model.add(Conv1D(n_filters,length_filters,strides=length_strides,padding='same',activation='sigmoid',))
 model.add(UpSampling1D(pool_size))
-model.add(Conv1D(n_filters,length_filters,strides=length_strides,padding='same',activation='relu',))
-model.add(UpSampling1D(pool_size))
-model.add(Conv1D(61,length_filters,strides=length_strides,padding='same',activation='relu'))
+#model.add(BatchNormalization())
+model.add(Dropout(0.3))
+model.add(Conv1D(61,length_filters,strides=length_strides,padding='same',activation='sigmoid'))
 
 
-model.compile(optimizer='sgd',loss=losses.binary_crossentropy,metrics=['mae'])
+model.compile(optimizer='sgd',loss=losses.mean_squared_error,metrics=[metrics.mean_squared_error,
+                                                                       metrics.kullback_leibler_divergence,
+                                                                       metrics.logcosh])
 model.summary()
 
 
-model.fit(X_train,X_train,batch_size=batch_size,epochs=500,validation_split=0.2,callbacks=callback_list,verbose=0)
+model.fit(X_train,X_train,batch_size=batch_size,epochs=3000,validation_split=0.2,callbacks=callback_list,verbose=1,)
 
 X_pred = model.predict(X_test)
 idx = np.random.choice(np.arange(len(X_test)),size=1,)
 fig,ax=plt.subplots(nrows=2)
-ax[0].plot(X_test[idx].reshape(2000,61))
-ax[1].plot(X_pred[idx].reshape(2000,61))
+ax[0].plot(X_test[idx])
+ax[1].plot(X_pred[idx])
