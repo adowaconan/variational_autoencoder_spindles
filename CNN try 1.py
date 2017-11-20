@@ -25,7 +25,7 @@ from keras.layers.convolutional import MaxPooling2D,MaxPooling1D
 from keras.layers import UpSampling2D,UpSampling1D
 from keras.utils import np_utils
 from keras import backend as K
-
+import os
 from sklearn.model_selection import train_test_split
 
 working_dir = 'D:\\NING - spindle\\Spindle_by_Graphical_Features\\'
@@ -53,7 +53,7 @@ class CustomVariationalLayer(Layer):
     def vae_loss(self,x,x_decoded_mean_squash):
         x = K.flatten(x)
         x_decoded_mean_squash = K.flatten(x_decoded_mean_squash)
-        xent_loss = 2000 * 32 * metrics.binary_crossentropy(x,x_decoded_mean_squash)
+        xent_loss = metrics.binary_crossentropy(x,x_decoded_mean_squash)
         kl_loss = -0.5 * K.mean(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var),axis=-1)
         return K.mean(xent_loss + kl_loss)
     
@@ -80,7 +80,7 @@ length_filters = 50
 pool_size = 10
 length_strides = 1
 n_output = 25
-file_path = working_dir+'weights.1D,vae.best.hdf5'#'weights.1D.best.hdf5'
+file_path = working_dir+'weights.1D.best.hdf5'# 'weights.1D.vae.best.hdf5'
 checkPoint = ModelCheckpoint(file_path,monitor='val_loss',save_best_only=True,mode='min',period=1,verbose=1)
 callback_list = [checkPoint]
 
@@ -141,8 +141,10 @@ vae.compile(optimizer='rmsprop',loss=None,metrics=[metrics.mean_squared_error,
                                                                        metrics.kullback_leibler_divergence,
                                                                        metrics.logcosh])
 vae.summary()
-
-history_callback = vae.fit(X_train,shuffle=True,batch_size=batch_size,epochs=5000,validation_split=0.2,callbacks=callback_list,verbose=1,)
+if os.path.exists('D:\\NING - spindle\\Spindle_by_Graphical_Features\\weights.1D.vae.best.hdf5'):
+    vae.load_weights('D:\\NING - spindle\\Spindle_by_Graphical_Features\\weights.1D.vae.best.hdf5')
+X_train_, X_validation = train_test_split(X_train,test_size=0.2)
+history_callback = vae.fit(X_train,shuffle=True,batch_size=batch_size,epochs=5000,validation_data=(X_validation,None),callbacks=callback_list,verbose=1,)
 pickle.dump(history_callback,open(working_dir + 'history_callback_vae.p','wb'))
 
 encoder = Model(X,z_mean)
@@ -150,42 +152,50 @@ x_test_encoded = encoder.predict(X_test,batch_size=batch_size)
 fig,ax = plt.subplots(figsize=(8,8))
 ax.scatter(x_test_encoded[:,0],x_test_encoded[:,1])
 
+decoder_input = Input(shape=(2,))
+_decoder_hid = decoder_hid(decoder_hid)
+_decoder_upsample = decoder_upsample(_decoder_hid)
+_Dnc_1 = Dnc_1(_decoder_upsample)
+_up_sample_1 = up_sample_1(_Dnc_1)
 
-#layer_ = {}
-#model = Sequential()
-#model.add(Conv1D(n_filters,length_filters,strides=length_strides,padding='same',activation='sigmoid',input_shape=(2000,32)))
-#model.add(BatchNormalization())
-#model.add(MaxPooling1D(pool_size))
-#model.add(Dropout(0.3))
-#model.add(Conv1D(int(n_filters/2),int(length_filters/2),strides=length_strides,padding='same',activation='sigmoid',))
-#model.add(BatchNormalization())
-#model.add(MaxPooling1D(int(pool_size/5)))
-#model.add(Dropout(0.5))
-#model.add(Conv1D(int(n_filters/4),int(length_filters/4),strides=length_strides,padding='same',activation='sigmoid',))
-#model.add(BatchNormalization())
-#model.add(MaxPooling1D(int(pool_size/2)))
-#model.add(Dropout(0.6))
-#model.add(Conv1D(int(n_filters/4),int(length_filters/4),strides=length_strides,padding='same',activation='sigmoid',))
-#model.add(UpSampling1D(int(pool_size/5)))
-#model.add(BatchNormalization())
-#model.add(Dropout(0.5))
-#model.add(Conv1D(int(n_filters/2),int(length_filters/2),strides=length_strides,padding='same',activation='sigmoid',))
-#model.add(UpSampling1D(int(pool_size/2)))
-#model.add(BatchNormalization())
-#model.add(Dropout(0.3))
-#model.add(Conv1D(n_filters,length_filters,strides=length_strides,padding='same',activation='sigmoid',))
-#model.add(UpSampling1D(pool_size))
-#model.add(BatchNormalization())
-#model.add(Conv1D(32,length_filters,strides=length_strides,padding='same',activation='sigmoid'))
-#model.compile(optimizer='sgd',loss=losses.mean_squared_error,metrics=[metrics.mean_squared_error,
-#                                                                       metrics.kullback_leibler_divergence,
-#                                                                       metrics.logcosh])
-#model.summary()
-#history_callback = model.fit(X_train,X_train,batch_size=batch_size,epochs=5000,validation_split=0.2,callbacks=callback_list,verbose=1,)
-#pickle.dump(history_callback,open(working_dir + 'history_callback.p','wb'))
-#
-#X_pred = model.predict(X_test)
-#idx = np.random.choice(np.arange(len(X_test)),size=1,)
-#fig,ax=plt.subplots(nrows=2)
-#ax[0].plot(X_test[idx])
-#ax[1].plot(X_pred[idx])
+
+layer_ = {}
+model = Sequential()
+model.add(Conv1D(n_filters,length_filters,strides=length_strides,padding='same',activation='sigmoid',input_shape=(2000,32)))
+model.add(BatchNormalization())
+model.add(MaxPooling1D(pool_size))
+model.add(Dropout(0.3))
+model.add(Conv1D(int(n_filters/2),int(length_filters/2),strides=length_strides,padding='same',activation='sigmoid',))
+model.add(BatchNormalization())
+model.add(MaxPooling1D(int(pool_size/5)))
+model.add(Dropout(0.5))
+model.add(Conv1D(int(n_filters/4),int(length_filters/4),strides=length_strides,padding='same',activation='sigmoid',))
+model.add(BatchNormalization())
+model.add(MaxPooling1D(int(pool_size/2)))
+model.add(Dropout(0.6))
+model.add(Conv1D(int(n_filters/4),int(length_filters/4),strides=length_strides,padding='same',activation='sigmoid',))
+model.add(UpSampling1D(int(pool_size/5)))
+model.add(BatchNormalization())
+model.add(Dropout(0.5))
+model.add(Conv1D(int(n_filters/2),int(length_filters/2),strides=length_strides,padding='same',activation='sigmoid',))
+model.add(UpSampling1D(int(pool_size/2)))
+model.add(BatchNormalization())
+model.add(Dropout(0.3))
+model.add(Conv1D(n_filters,length_filters,strides=length_strides,padding='same',activation='sigmoid',))
+model.add(UpSampling1D(pool_size))
+model.add(BatchNormalization())
+model.add(Conv1D(32,length_filters,strides=length_strides,padding='same',activation='sigmoid'))
+model.compile(optimizer='sgd',loss=losses.mean_squared_error,metrics=[metrics.mean_squared_error,
+                                                                       metrics.kullback_leibler_divergence,
+                                                                       metrics.logcosh])
+model.summary()
+if os.path.exists('D:\\NING - spindle\\Spindle_by_Graphical_Features\\weights.1D.best.hdf5'):
+    model.load_weights('D:\\NING - spindle\\Spindle_by_Graphical_Features\\weights.1D.best.hdf5')
+history_callback = model.fit(X_train,X_train,batch_size=batch_size,epochs=5000,validation_split=0.2,callbacks=callback_list,verbose=1,)
+pickle.dump(history_callback,open(working_dir + 'history_callback.p','wb'))
+
+X_pred = model.predict(X_test)
+idx = np.random.choice(np.arange(len(X_test)),size=1,)
+fig,ax=plt.subplots(nrows=2)
+ax[0].plot(X_test[idx][0])
+ax[1].plot(X_pred[idx][0]*data.std() + data.mean())
