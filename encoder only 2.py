@@ -31,7 +31,7 @@ import mne
 
 os.chdir('D:/Ning - spindle/training set')
 
-working_dir='D:\\NING - spindle\\Spindle_by_Graphical_Features\\eventRelated_12_12_2017\\'
+working_dir='D:\\NING - spindle\\Spindle_by_Graphical_Features\\eventRelated_12_20_2017\\'
 saving_dir = 'D:\\NING - spindle\\Spindle_by_Graphical_Features\\CNN vae\\'
 
 if not os.path.exists(saving_dir):
@@ -84,9 +84,16 @@ data = []
 for tf in [f for f in os.listdir(working_dir) if ('-tfr.h5' in f)]:
     tfcs = mne.time_frequency.read_tfrs(working_dir+tf)[0]
     data_ = tfcs.data
+    
+    scaler = MinMaxScaler(feature_range=(0,1))
+    vectorizer = Vectorizer()
+    data_vec = vectorizer.fit_transform(data_)
+    data_scaled = scaler.fit_transform(data_vec)
+    data_scaled = vectorizer.inverse_transform(data_scaled)
 #    labels_ = tfcs.info['event'].iloc[:,-1].values
     del tfcs
-    data.append(data_)
+    del data_, data_vec
+    data.append(data_scaled)
 #    labels.append(labels_)
 data = np.concatenate(data,axis=0)
 
@@ -138,8 +145,8 @@ coefs = np.swapaxes(coefs,0,1)
 
 fig,axes = plt.subplots(nrows=4,ncols=int(32/4),figsize=(20,8))
 for ii,(ax,title) in enumerate(zip(axes.flatten(),info['ch_names'])):
-    im = ax.imshow(coefs.mean(0)[ii,:,:],origin='lower',aspect='auto',extent=[0,3000,8,20],
-                   vmin=0,vmax=3e-10)
+    im = ax.imshow(coefs.mean(0)[ii,:,:],origin='lower',aspect='auto',extent=[0,3000,6,22],
+                   vmin=0,)
     ax.set(title=title)
 fig.tight_layout()
 fig.savefig(saving_dir+'decoding patterns.png',dpi=300)
