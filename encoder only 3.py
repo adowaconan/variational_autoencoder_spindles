@@ -159,16 +159,91 @@ for ii in range(breaks):
     print('mean similarity: %.4f +/- %.4f'%(np.mean(validation_measure),np.std(validation_measure)))
     temp_results.append([(ii+1)*50,np.mean(validation_measure),np.std(validation_measure)])
     results_for_saving = pd.DataFrame(np.array(temp_results).reshape(-1,3),columns=['epochs','mean score','score std'])
-    results_for_saving.to_csv(saving_dir_weight + 'scores.csv',index=False)
+    if os.path.exists(saving_dir_weight + 'scores_u_net.csv'):
+        temp_result_for_saving = pd.read_csv(saving_dir_weight + 'scores_u_net.csv')
+        results_for_saving = pd.concat([temp_result_for_saving,results_for_saving])
+    results_for_saving.to_csv(saving_dir_weight + 'scores_u_net.csv',index=False)
 
 
 
 
+#########################################################
+############## covn autoencoder model ###################
+#########################################################
+from keras.layers import Input, Conv2D, Conv2DTranspose, MaxPooling2D, UpSampling2D,Dropout,BatchNormalization
+from keras.models import Model
+import keras
+from keras.callbacks import ModelCheckpoint
 
+inputs = Input(shape=(32,16,192),batch_shape=(None,32,16,192),name='input',dtype='float64',)
+conv1 = Conv2D(64,(4,8),strides=(2,2),activation='relu',padding='same',data_format='channels_first',
+              kernel_initializer='he_normal')(inputs)
+print('conv1 shape:',conv1.shape)
+drop1 = Dropout(0.5)(conv1)
+norm1 = BatchNormalization()(drop1)
+down1 = MaxPooling2D((2,4),(2,2),padding='same',data_format='channels_first',)(norm1)
+print('down1 shape:', down1.shape)
 
+conv2 = Conv2D(128,(4,8),strides=(2,2),activation='relu',padding='same',data_format='channels_first',
+              kernel_initializer='he_normal')(down1)
+print('conv2 shape:',conv2.shape)
+drop2 = Dropout(0.5)(conv2)
+norm2 = BatchNormalization()(drop2)
+down2 = MaxPooling2D((2,4),(2,2),padding='same',data_format='channels_first',)(norm2)
+print('down2 shape:',down2.shape)
 
+conv3 = Conv2D(265,(4,8),strides=(2,2),activation='relu',padding='same',data_format='channels_first',
+              kernel_initializer='he_normal')(down2)
+print('conv3 shape:',conv3.shape)
+drop3 = Dropout(0.5)(conv3)
+norm3 = BatchNormalization()(drop3)
+down3 = MaxPooling2D((2,4),(2,2),padding='same',data_format='channels_first',)(norm3)
+print('down3 shape:',down3.shape)
 
+decov4 = Conv2DTranspose(128,(4,8),strides=(2,4),activation='relu',padding='same',data_format='channels_first',
+                        kernel_initializer='he_normal')(down3)
+print('decov4 shape:',decov4.shape)
+drop4 = Dropout(0.5)(decov4)
+norm4 = BatchNormalization()(drop4)
 
+decov5 = Conv2DTranspose(64,(4,8),strides=(2,4),activation='relu',padding='same',data_format='channels_first',
+                        kernel_initializer='he_normal')(norm4)
+print('decov5 shape:',decov5.shape)
+drop5 = Dropout(0.5)(decov5)
+norm5 = BatchNormalization()(drop5)
+
+decov6 = Conv2DTranspose(32,(4,8),strides=(4,4),activation='relu',padding='same',data_format='channels_first',
+                        kernel_initializer='he_normal')(norm5)
+print('decov6 shape:',decov6.shape)
+
+model_auto = Model(inputs = inputs,outputs=decov6)
+model_auto.compile(optimizer=keras.optimizers.Adam(),loss=keras.losses.binary_crossentropy,metrics=['accuracy'])
+
+#data = np.random.rand(10,32,16,192).astype(np.float64)
+#predict = model_auto.predict(data)
+#predict.shape
+
+breaks = 500
+batch_size = 50
+file_path = saving_dir_weight+'weights.2D_auto_encoder.best.hdf5'
+checkPoint = ModelCheckpoint(file_path,monitor='val_loss',save_best_only=True,mode='min',period=1,verbose=1)
+callback_list = [checkPoint]
+
+temp_results = []
+if os.path.exists('D:\\NING - spindle\\Spindle_by_Graphical_Features\\weights.2D_auto_encoder.best.hdf5'):
+    model_auto.load_weights('D:\\NING - spindle\\Spindle_by_Graphical_Features\\weights.2D_auto_encoder.best.hdf5')
+for ii in range(breaks):
+    model_auto.fit(x=X_train,y=X_train,batch_size=batch_size,epochs=50,
+                    validation_data=(X_validation,X_validation),shuffle=True,callbacks=callback_list)
+    X_predict = model_auto.predict(X_validation)
+    validation_measure = [cos_similarity(a,b) for a,b in zip(X_validation, X_predict)]
+    print('mean similarity: %.4f +/- %.4f'%(np.mean(validation_measure),np.std(validation_measure)))
+    temp_results.append([(ii+1)*50,np.mean(validation_measure),np.std(validation_measure)])
+    results_for_saving = pd.DataFrame(np.array(temp_results).reshape(-1,3),columns=['epochs','mean score','score std'])
+    if os.path.exists(saving_dir_weight + 'scores_autoencoder.csv'):
+        temp_result_for_saving = pd.read_csv(saving_dir_weight + 'scores_autoencoder.csv')
+        results_for_saving = pd.concat([temp_result_for_saving,results_for_saving])
+    results_for_saving.to_csv(saving_dir_weight + 'scores_autoencoder.csv',index=False)
 
 
 
