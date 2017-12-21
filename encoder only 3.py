@@ -144,7 +144,7 @@ model_U_net.compile(optimizer=keras.optimizers.Adam(),
 
 breaks = 500
 batch_size = 50
-file_path = saving_dir_weight+'weights.1D.best.hdf5'# 'weights.1D.vae.best.hdf5'
+file_path = saving_dir_weight+'weights.2D_u_net.best.hdf5'
 checkPoint = ModelCheckpoint(file_path,monitor='val_loss',save_best_only=True,mode='min',period=1,verbose=1)
 callback_list = [checkPoint]
 
