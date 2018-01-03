@@ -12,6 +12,7 @@ from mne.decoding import Vectorizer
 from sklearn import metrics
 import pandas as pd
 import pickle
+from matplotlib import pyplot as plt
 #os.chdir('D:/Ning - spindle/variational_autoencoder_spindles')
 #from DataGenerator import DataGenerator
 
@@ -19,7 +20,7 @@ os.chdir('D:/Ning - spindle/training set')
 
 working_dir='D:\\NING - spindle\\Spindle_by_Graphical_Features\\eventRelated_12_20_2017\\'
 saving_dir = 'D:\\NING - spindle\\Spindle_by_Graphical_Features\\CNN vae\\'
-saving_dir_weight = 'D:\\NING - spindle\\Spindle_by_Graphical_Features\\classification 1\\'
+saving_dir_weight = 'D:\\NING - spindle\\Spindle_by_Graphical_Features\\inverse\\'
 def cos_similarity(x,y):
     x = Vectorizer().fit_transform(x)
     y = Vectorizer().fit_transform(y)
@@ -39,8 +40,8 @@ if not os.path.exists(saving_dir_weight):
 #X_train = np.concatenate(X_train,axis=0)
 #y_train = np.concatenate(y_train,axis=0)
 
-X_validation,y_validation = pickle.load(open('D:\\NING - spindle\\Spindle_by_Graphical_Features\\data\\validation\\validation.p','rb'))
-
+temp = pickle.load(open('D:\\NING - spindle\\Spindle_by_Graphical_Features\\data\\validation\\validation.p','rb'))
+X_validation,y_validation = temp
 
 #X_train = np.concatenate([X_train,X_validation],axis=0)
 #y_train = np.concatenate([y_train,y_validation],axis=0)
@@ -159,7 +160,7 @@ import keras
 from keras.callbacks import ModelCheckpoint
 
 inputs = Input(shape=(32,16,192),batch_shape=(None,32,16,192),name='input',dtype='float64',)
-conv1 = Conv2D(256,(4,48),strides=(1,1),activation='relu',padding='valid',data_format='channels_first',
+conv1 = Conv2D(32,(4,48),strides=(1,1),activation='relu',padding='valid',data_format='channels_first',
               kernel_initializer='he_normal')(inputs)
 print('conv1 shape:',conv1.shape)
 drop1 = Dropout(0.5)(conv1)
@@ -168,7 +169,7 @@ print('norm1 shape:',norm1.shape)
 #down1 = MaxPooling2D((2,4),(1,2),padding='valid',data_format='channels_first',)(norm1)
 #print('down1 shape:', down1.shape)
 
-conv2 = Conv2D(128,(4,48),strides=(1,1),activation='relu',padding='valid',data_format='channels_first',
+conv2 = Conv2D(64,(4,48),strides=(1,1),activation='relu',padding='valid',data_format='channels_first',
               kernel_initializer='he_normal')(norm1)
 print('conv2 shape:',conv2.shape)
 drop2 = Dropout(0.5)(conv2)
@@ -177,7 +178,7 @@ print('norm2 shape:',norm2.shape)
 #down2 = MaxPooling2D((2,4),(1,2),padding='valid',data_format='channels_first',)(norm2)
 #print('down2 shape:',down2.shape)
 
-conv3 = Conv2D(64,(4,48),strides=(1,1),activation='relu',padding='valid',data_format='channels_first',
+conv3 = Conv2D(128,(4,48),strides=(1,1),activation='relu',padding='valid',data_format='channels_first',
               kernel_initializer='he_normal')(norm2)
 print('conv3 shape:',conv3.shape)
 drop3 = Dropout(0.5)(conv3)
@@ -186,7 +187,7 @@ print('norm3 shape:',norm3.shape)
 #down3 = MaxPooling2D((2,4),(1,2),padding='valid',data_format='channels_first',)(norm3)
 #print('down3 shape:',down3.shape)
 
-conv4 = Conv2D(32,(4,48),strides=(1,1),activation='relu',padding='valid',data_format='channels_first',
+conv4 = Conv2D(256,(4,48),strides=(1,1),activation='relu',padding='valid',data_format='channels_first',
               kernel_initializer='he_normal')(norm3)
 print('conv4 shape:',conv4.shape)
 drop4 = Dropout(0.5)(conv4)
@@ -228,7 +229,7 @@ print('dense 7 shape:',drop7.shape)
 #print('decov6 shape:',decov6.shape)
 def AUC_(y_true, y_pred):
     return metrics.roc_auc_score(y_true,y_pred)
-model_auto = Model(inputs = inputs,outputs=dens7)
+model_auto = Model(inputs = inputs,outputs=drop7)
 model_auto.compile(optimizer=keras.optimizers.SGD(),loss=keras.losses.mse,metrics=['accuracy',
                    'categorical_accuracy'])
 
@@ -263,14 +264,14 @@ model_auto.compile(optimizer=keras.optimizers.SGD(),loss=keras.losses.mse,metric
 breaks = 500
 batch_size = 100
 through = 5
-file_path = saving_dir_weight+'weights.2D_classification.best.hdf5'
+file_path = saving_dir_weight+'weights.2D_classification_small_to_large.best.hdf5'
 checkPoint = ModelCheckpoint(file_path,monitor='val_loss',save_best_only=True,mode='min',period=1,verbose=1)
 callback_list = [checkPoint]
 temp_results = []
-if os.path.exists(saving_dir_weight+'weights.2D_classification.best.hdf5'):
-    model_auto.load_weights(saving_dir_weight+'weights.2D_classification.best.hdf5')
+if os.path.exists(saving_dir_weight+'weights.2D_classification_small_to_large.best.hdf5'):
+    model_auto.load_weights(saving_dir_weight+'weights.2D_classification_small_to_large.best.hdf5')
 
-from matplotlib import pyplot as plt
+
 for ii in range(breaks):
     labels = []
     for jj in range(through):# going through the training data 5 times
@@ -282,7 +283,7 @@ for ii in range(breaks):
             model_auto.fit(x=X_train_,y=y_train_,batch_size=batch_size,epochs=2,
                         validation_data=(X_validation,y_validation),shuffle=True,callbacks=callback_list)
     labels = np.concatenate(labels,axis=0)
-    model_auto.load_weights(saving_dir_weight+'weights.2D_classification.best.hdf5')
+    model_auto.load_weights(saving_dir_weight+'weights.2D_classification_small_to_large.best.hdf5')
     X_predict = model_auto.predict(X_validation)[:,-1] > np.mean(labels[:,-1])
     X_predict_prob = model_auto.predict(X_validation)[:,-1]
     print(metrics.classification_report(y_validation[:,-1],X_predict))
@@ -307,9 +308,6 @@ for ii in range(breaks):
         results_for_saving = pd.concat([temp_result_for_saving,results_for_saving])
     results_for_saving.to_csv(saving_dir_weight + 'scores_classification.csv',index=False)
 
-
-
-
 X_test, y_test = pickle.load(open('D:\\NING - spindle\\Spindle_by_Graphical_Features\\data\\test\\test.p','rb'))
 
 X_predict_ = model_auto.predict(X_test)[:,-1] > 0.5
@@ -322,7 +320,7 @@ selectivity = metrics.recall_score(y_test[:,-1],X_predict_,average='weighted')
 plt.close('all')
 fig,ax = plt.subplots(figsize=(8,8))
 ax.plot(fpr,tpr,label='AUC = %.3f\nSensitivity = %.3f\nSelectivity = %.3f'%(AUC,sensitivity,selectivity))
-ax.set(xlabel='false postive rate',ylabel='true positive rate',title='test data\nlarge to small',
+ax.set(xlabel='false postive rate',ylabel='true positive rate',title='test data\nsmall to large',
        xlim=(0,1),ylim=(0,1))
 ax.legend(loc='best')
 fig.savefig(saving_dir_weight + 'test data AUC plot.png',dpi=400)
@@ -340,14 +338,11 @@ for ii,(m,coor) in enumerate(zip(cf.flatten(),coors)):
 ax.set(xticks=(0.5,1.5),yticks=(0.25,1.25),
         xticklabels=['non spindle','spindle'],
         yticklabels=['non spindle','spindle'])
-ax.set_title('Confusion matrix\nDCNN',fontweight='bold',fontsize=20)
+ax.set_title('Confusion matrix\nDCNN small to large',fontweight='bold',fontsize=20)
 ax.set_ylabel('True label',fontsize=20,fontweight='bold')
 plt.xticks(fontsize=16)
 plt.yticks(fontsize=16)
 fig.savefig(saving_dir_weight+'confusion matrix.png',dpi=400)
-
-
-
 
 
 
