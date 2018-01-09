@@ -13,6 +13,7 @@ from sklearn import metrics
 import pandas as pd
 import pickle
 from matplotlib import pyplot as plt
+from keras.utils import np_utils
 #os.chdir('D:/Ning - spindle/variational_autoencoder_spindles')
 #from DataGenerator import DataGenerator
 
@@ -179,6 +180,11 @@ for ii in range(breaks):
             X_train_ = np.concatenate([X_train_,X_validation],axis=0)
             y_train_ = np.concatenate([y_train_,y_validation],axis=0)
             X_train_,y_train_ = utils.shuffle(X_train_,y_train_)
+            random_inputs = np.random.rand(X_train_.shape[0],32,16,192)
+            random_labels = [0]*X_train_.shape[0]
+            random_labels = np_utils.to_categorical(random_labels,2)
+            X_train_ = np.concatenate([X_train_,random_inputs],axis=0)
+            y_train_ = np.concatenate([y_train_,random_labels],axis=0)
             labels.append(y_train_)
             model_auto.fit(x=X_train_,y=y_train_,batch_size=batch_size,epochs=2,
                         validation_split=0.2,shuffle=True,callbacks=callback_list)

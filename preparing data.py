@@ -31,6 +31,7 @@ for tf in np.array([f for f in os.listdir(working_dir) if ('-tfr.h5' in f)]):
     scaler = MinMaxScaler(feature_range=(0,1))
     vectorizer = Vectorizer()
     data_vec = vectorizer.fit_transform(data_)
+    
     data_scaled = scaler.fit_transform(data_vec)
     data_scaled = vectorizer.inverse_transform(data_scaled)
     del tfcs

@@ -12,6 +12,7 @@ from mne.decoding import Vectorizer
 from sklearn import metrics
 import pandas as pd
 import pickle
+from keras.utils import np_utils
 #os.chdir('D:/Ning - spindle/variational_autoencoder_spindles')
 #from DataGenerator import DataGenerator
 
@@ -19,7 +20,7 @@ os.chdir('D:/Ning - spindle/training set')
 
 working_dir='D:\\NING - spindle\\Spindle_by_Graphical_Features\\eventRelated_12_20_2017\\'
 saving_dir = 'D:\\NING - spindle\\Spindle_by_Graphical_Features\\CNN vae\\'
-saving_dir_weight = 'D:\\NING - spindle\\Spindle_by_Graphical_Features\\classification 1\\'
+saving_dir_weight = 'D:\\NING - spindle\\Spindle_by_Graphical_Features\\classification 2 (add random inputs)\\'
 def cos_similarity(x,y):
     x = Vectorizer().fit_transform(x)
     y = Vectorizer().fit_transform(y)
@@ -195,16 +196,16 @@ print('norm4 shape:',norm4.shape)
 #down4 = MaxPooling2D((2,4),(1,2),padding='valid',data_format='channels_first',)(norm4)
 #print('down4 shape:',down4.shape)
 
-#conv5 = Conv2D(256,(2,2),strides=(1,1),activation='relu',padding='same',data_format='channels_first',
-#              kernel_initializer='he_normal')(norm4)
-#print('conv5 shape:',conv5.shape)
-#drop5 = Dropout(0.5)(conv5)
-#norm5 = BatchNormalization()(drop5)
-#print('norm5 shape:',norm5.shape)
+conv5 = Conv2D(16,(4,4),strides=(1,1),activation='relu',padding='valid',data_format='channels_first',
+              kernel_initializer='he_normal')(norm4)
+print('conv5 shape:',conv5.shape)
+drop5 = Dropout(0.5)(conv5)
+norm5 = BatchNormalization()(drop5)
+print('norm5 shape:',norm5.shape)
 #down5 = MaxPooling2D((2,2),(1,1),padding='valid',data_format='channels_first',)(norm5)
 #print('down5 shape:',down5.shape)
 
-flat6 = Flatten()(norm4)
+flat6 = Flatten()(norm5)
 drop6 = Dropout(0.5)(flat6)
 print('flatten 6 shape:',drop6.shape)
 
@@ -278,6 +279,11 @@ for ii in range(breaks):
         for kk in step_idx: # going through 10 splitted training data
             temp = pickle.load(open('D:\\NING - spindle\\Spindle_by_Graphical_Features\\data\\train\\train%d.p'%(kk),'rb'))
             X_train_,y_train_ = temp
+            random_inputs = np.random.rand(X_train_.shape[0],32,16,192)
+            random_labels = [0]*X_train_.shape[0]
+            random_labels = np_utils.to_categorical(random_labels,2)
+            X_train_ = np.concatenate([X_train_,random_inputs],axis=0)
+            y_train_ = np.concatenate([y_train_,random_labels],axis=0)
             labels.append(y_train_)
             model_auto.fit(x=X_train_,y=y_train_,batch_size=batch_size,epochs=2,
                         validation_data=(X_validation,y_validation),shuffle=True,callbacks=callback_list)
